@@ -1,0 +1,279 @@
+
+  <!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AquaCore Voice Assistant</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+        }
+
+        .voice-container {
+            width: 90%;
+            max-width: 500px;
+
+            padding: 40px 30px;
+
+            text-align: center;
+
+            background: white;
+            border-radius: 20px;
+
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        #voice-btn {
+            width: 100px;
+            height: 100px;
+
+            border: none;
+            border-radius: 50%;
+
+            font-size: 40px;
+
+            cursor: pointer;
+
+            background: #e8f5e9;
+
+            transition: transform 0.2s ease;
+        }
+
+        #voice-btn:hover {
+            transform: scale(1.05);
+        }
+
+        #voice-btn:disabled {
+            cursor: not-allowed;
+        }
+
+        #voice-btn.listening {
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.12);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        #status {
+            margin-top: 25px;
+
+            font-size: 18px;
+            font-weight: bold;
+
+            min-height: 25px;
+        }
+
+        #transcript {
+            margin-top: 20px;
+
+            min-height: 30px;
+
+            color: #555;
+
+            line-height: 1.5;
+        }
+
+        .error {
+            color: #c62828;
+        }
+    </style>
+</head>
+
+
+<body>
+
+    <div class="voice-container">
+
+        <h1>AquaCore Voice Assistant</h1>
+
+        <button
+            id="voice-btn"
+            aria-label="Start voice recognition"
+            type="button"
+        >
+            🎙️
+        </button>
+
+        <p id="status">
+            Ready
+        </p>
+
+        <p id="transcript"></p>
+
+    </div>
+
+
+    <script type="module">
+
+        import {
+            startListening,
+            speak,
+            setVoiceCallbacks
+        } from "./voiceAssistant.js";
+
+
+        // ------------------------------
+        // Get UI elements
+        // ------------------------------
+
+        const voiceButton =
+            document.getElementById("voice-btn");
+
+        const status =
+            document.getElementById("status");
+
+        const transcript =
+            document.getElementById("transcript");
+
+
+        // ------------------------------
+        // Voice callbacks
+        // ------------------------------
+
+        setVoiceCallbacks({
+
+            // Recognition started
+            onStart: () => {
+
+                status.textContent =
+                    "🎙️ Listening...";
+
+                status.className = "";
+
+                transcript.textContent = "";
+
+                voiceButton.classList.add(
+                    "listening"
+                );
+
+                voiceButton.disabled = true;
+
+            },
+
+
+            // Speech recognized
+    onResult: (spokenText) => {
+
+        transcript.textContent =
+            `You said: ${spokenText}`;
+
+        status.textContent =
+            "⏳ Processing...";
+
+        status.className = "";
+
+    },
+    onProcessing: () => {
+
+    status.textContent =
+        "⏳ Processing...";
+
+    status.className = "";
+
+    voiceButton.classList.remove(
+        "listening"
+    );
+
+},
+    onSpeaking: () => {
+
+    status.textContent =
+        "🔊 Speaking...";
+
+    status.className = "";
+
+},
+
+
+            // Recognition ended
+    onEnd: (hadResult) => {
+
+        if (!hadResult) {
+        status.textContent = "Ready";
+        }
+
+        voiceButton.classList.remove(
+        "listening"
+        );
+
+        voiceButton.disabled = false;
+
+},
+
+
+            // Voice error
+            onError: (message) => {
+
+                status.textContent =
+                    message;
+
+                status.className =
+                    "error";
+
+                voiceButton.classList.remove(
+                    "listening"
+                );
+
+                voiceButton.disabled = false;
+
+            }
+
+        });
+
+
+        // ------------------------------
+        // Microphone button
+        // ------------------------------
+
+        voiceButton.addEventListener(
+            "click",
+            () => {
+
+                status.textContent =
+                    "Starting...";
+
+                status.className = "";
+
+                transcript.textContent = "";
+
+                startListening();
+
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>
