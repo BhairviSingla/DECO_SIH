@@ -15,52 +15,82 @@ function DiseaseDetection() {
   const fileInputRef = useRef(null);
 
   const [image, setImage] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [context, setContext] = useState("");
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files?.[0];
+ const handleImageUpload = (event) => {
+  const file = event.target.files?.[0];
 
-    if (!file) return;
+  if (!file) return;
 
-    const imageUrl = URL.createObjectURL(file);
+  const imageUrl = URL.createObjectURL(file);
 
-    setImage(imageUrl);
-    setResult(null);
-  };
+  setImage(imageUrl);
+  setSelectedFile(file);
+  setResult(null);
+};
+ const handleAnalyze = async () => {
+  if (!selectedFile) return;
 
-  const handleAnalyze = () => {
-    if (!image) return;
+  setAnalyzing(true);
+  setResult(null);
 
-    setAnalyzing(true);
-    setResult(null);
+  try {
+    const formData = new FormData();
+    formData.append("file", selectedFile);
 
-    // Frontend demo simulation
-    setTimeout(() => {
-      setAnalyzing(false);
+    const response = await fetch(
+      "http://127.0.0.1:8000/api/disease-check",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
 
-      setResult({
-        disease: "Bacterial Infection",
-        confidence: 87,
-        severity: "Moderate",
-        risk: "High",
-        recommendation:
-          "Isolate affected fish and begin the recommended treatment. Monitor water quality closely.",
-      });
-    }, 1800);
-  };
-
-  const resetAnalysis = () => {
-    setImage(null);
-    setResult(null);
-    setContext("");
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (!response.ok) {
+      throw new Error("Disease detection request failed");
     }
-  };
 
+    const data = await response.json();
+
+    setResult({
+      disease: data.prediction,
+      confidence: Math.round(data.confidence * 100),
+      severity:
+        data.prediction.toLowerCase() === "healthy"
+          ? "Low"
+          : "Moderate",
+      risk:
+        data.prediction.toLowerCase() === "healthy"
+          ? "Low"
+          : "High",
+      recommendation:
+        data.prediction.toLowerCase() === "healthy"
+          ? "The fish appears healthy. Continue monitoring water quality and fish behavior."
+          : "Isolate affected fish and monitor water quality closely. Consider appropriate treatment.",
+    });
+  } catch (error) {
+    console.error("Disease detection error:", error);
+
+    alert(
+      "Could not connect to the AquaCore backend. Make sure the FastAPI server is running."
+    );
+  } finally {
+    setAnalyzing(false);
+  }
+};
+const resetAnalysis = () => {
+  setImage(null);
+  setSelectedFile(null);
+  setResult(null);
+  setContext("");
+
+  if (fileInputRef.current) {
+    fileInputRef.current.value = "";
+  }
+};
   return (
     <div className="disease-page">
       {/* Header */}

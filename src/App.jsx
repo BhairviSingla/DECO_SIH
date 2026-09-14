@@ -42,7 +42,7 @@ function App() {
 
       <Route path="/tank/:id" element={<TankAnalysis />} />
 
-      <Route path="/analysis" element={<Placeholder title="AI Tank Analysis" />} />
+      <Route path="/analysis" element={<Navigate to="/tank/A" replace />} />
 
       <Route path="/disease" element={<DiseaseDetection />} />
        <Route

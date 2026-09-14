@@ -42,53 +42,62 @@ function AquaBot() {
     },
   ];
 
-  const getBotReply = (text) => {
-    const lower = text.toLowerCase();
 
-    if (lower.includes("water")) {
-      return "Your water quality is currently stable. pH is 7.2, dissolved oxygen is 6.8 mg/L, and ammonia is within the safe range.";
+
+const sendMessage = async (text = message) => {
+  const finalMessage = text.trim();
+
+  if (!finalMessage) return;
+
+  setMessages((prev) => [
+    ...prev,
+    {
+      type: "user",
+      text: finalMessage,
+    },
+  ]);
+
+  setMessage("");
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/api/voice-query",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: finalMessage,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("AquaBot request failed");
     }
 
-    if (lower.includes("alert")) {
-      return "Tank 03 has an early-warning alert. Ammonia is showing an upward trend. DECO recommends checking filtration and increasing aeration.";
-    }
-
-    if (lower.includes("temperature")) {
-      return "Tank temperatures are currently between 27°C and 29°C. Tank 02 is at 29°C and should be monitored.";
-    }
-
-    if (lower.includes("health")) {
-      return "Overall tank health is good. 3 tanks are healthy, 1 needs monitoring, and no critical alerts are active.";
-    }
-
-    return "I can help with water quality, tank health, disease alerts, and recommended actions. Try one of the quick actions below.";
-  };
-
-  const sendMessage = (text = message) => {
-    const finalMessage = text.trim();
-
-    if (!finalMessage) return;
+    const data = await response.json();
 
     setMessages((prev) => [
       ...prev,
       {
-        type: "user",
-        text: finalMessage,
+        type: "bot",
+        text: data.answer,
       },
     ]);
+  } catch (error) {
+    console.error("AquaBot error:", error);
 
-    setMessage("");
-
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          type: "bot",
-          text: getBotReply(finalMessage),
-        },
-      ]);
-    }, 700);
-  };
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: "bot",
+        text: "Sorry, I could not connect to the AquaCore assistant.",
+      },
+    ]);
+  }
+};
 
   return (
     <div className="aquabot-page">

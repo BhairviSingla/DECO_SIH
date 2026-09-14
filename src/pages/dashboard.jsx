@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -14,38 +14,7 @@ import {
   Activity,
 } from "lucide-react";
 
-const tanks = [
-  {
-    id: "A",
-    name: "Tank A",
-    status: "healthy",
-    statusText: "Healthy",
-    temperature: "27.4°C",
-    ph: "7.2",
-    oxygen: "6.8",
-    ammonia: "0.15",
-  },
-  {
-    id: "B",
-    name: "Tank B",
-    status: "healthy",
-    statusText: "Healthy",
-    temperature: "28.1°C",
-    ph: "7.5",
-    oxygen: "6.1",
-    ammonia: "0.21",
-  },
-  {
-    id: "C",
-    name: "Tank C",
-    status: "critical",
-    statusText: "Critical",
-    temperature: "29.2°C",
-    ph: "6.4",
-    oxygen: "2.1",
-    ammonia: "0.71",
-  },
-];
+
 
 function Parameter({ icon: Icon, label, value }) {
   return (
@@ -59,6 +28,62 @@ function Parameter({ icon: Icon, label, value }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+
+  const [tanks, setTanks] = useState([]);
+  const [aiAlert, setAiAlert] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchTanks = async () => {
+      try {
+        const response = await fetch(
+          "http://100.83.222.33:8000/api/tanks"
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch tank data");
+        }
+
+        const data = await response.json();
+
+        setTanks(data);
+      } catch (err) {
+        console.error("Error fetching tanks:", err);
+        setError("Unable to connect to AquaCore backend.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTanks();
+  }, []);
+  useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/ai-alert")
+    .then((res) => res.json())
+    .then((data) => {
+      setAiAlert(data);
+    })
+    .catch((error) => {
+      console.error("Error fetching AI alert:", error);
+    });
+}, []);
+
+  const healthyCount = tanks.filter(
+    (tank) => tank.status?.toLowerCase() === "good"
+  ).length;
+
+  const warningCount = tanks.filter(
+    (tank) => tank.status?.toLowerCase() === "warning"
+  ).length;
+
+  const criticalCount = tanks.filter(
+    (tank) => tank.status?.toLowerCase() === "critical"
+  ).length;
+
+  const criticalTank = tanks.find(
+    (tank) => tank.status?.toLowerCase() === "critical"
+  );
 
   return (
     <div className="app-page">
@@ -97,22 +122,21 @@ export default function Dashboard() {
           </div>
 
           <div className="health-stats">
-            <div>
-              <strong>3</strong>
-              <span>Healthy</span>
-            </div>
+  <div>
+    <strong>{healthyCount}</strong>
+    <span>Healthy</span>
+  </div>
 
-            <div>
-              <strong>1</strong>
-              <span>Warning</span>
-            </div>
+  <div>
+    <strong>{warningCount}</strong>
+    <span>Warning</span>
+  </div>
 
-            <div>
-              <strong>1</strong>
-              <span>Critical</span>
-            </div>
-          </div>
-
+  <div>
+    <strong>{criticalCount}</strong>
+    <span>Critical</span>
+  </div>
+</div>
           <div className="health-progress">
             <div className="health-progress-good"></div>
             <div className="health-progress-warning"></div>
@@ -132,16 +156,27 @@ export default function Dashboard() {
               <span className="live-pill">LIVE</span>
             </div>
 
-            <h3>Tank C needs attention</h3>
+            <h3>
+  {criticalTank
+    ? `${criticalTank.name} needs attention`
+    : warningCount > 0
+    ? "Some tanks need attention"
+    : "All tanks are looking good"}
+</h3>
 
             <p>
-              Ammonia is trending upward and may reach an unsafe
-              level within the next 24 hours.
+              {criticalTank
+                ? `Ammonia level is ${criticalTank.ammonia} ppm and requires immediate attention.`
+                : warningCount > 0
+                ? "Some tanks have warning-level conditions that should be monitored."
+                : "All tanks are currently within safe conditions."}
             </p>
 
             <button
               className="text-button"
-              onClick={() => navigate("/tank/C")}
+              onClick={() =>
+  criticalTank && navigate(`/tank/${criticalTank.id}`)
+}
             >
               View prediction
               <ChevronRight size={16} />
@@ -166,7 +201,9 @@ export default function Dashboard() {
             {tanks.map((tank) => (
               <button
                 key={tank.id}
-                className={`tank-card ${tank.status}`}
+                className={`tank-card ${
+                  tank.status === "good" ? "healthy" : tank.status
+                }`}
                 onClick={() => navigate(`/tank/${tank.id}`)}
               >
                 <div className="tank-card-header">
@@ -181,9 +218,17 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className={`status-pill ${tank.status}`}>
+                  <div
+                    className={`status-pill ${
+                      tank.status === "good" ? "healthy" : tank.status
+                    }`}
+                  >
                     <span></span>
-                    {tank.statusText}
+                    {tank.status === "good"
+                      ? "Healthy"
+                      : tank.status === "warning"
+                      ? "Warning"
+                      : "Critical"}
                   </div>
                 </div>
 
@@ -191,7 +236,7 @@ export default function Dashboard() {
                   <Parameter
                     icon={Thermometer}
                     label="Temp"
-                    value={tank.temperature}
+                    value={`${tank.temperature}°C`}
                   />
 
                   <Parameter

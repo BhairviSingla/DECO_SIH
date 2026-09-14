@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -82,6 +82,18 @@ export default function TankAnalysis() {
   const { id } = useParams();
 
   const tank = tankData[id?.toUpperCase()] || tankData.C;
+  const [forecast, setForecast] = useState([]);
+
+useEffect(() => {
+  fetch(`http://127.0.0.1:8000/api/forecast/${id === "A" ? 1 : id === "B" ? 2 : id === "C" ? 3 : 1}`)
+    .then((res) => res.json())
+    .then((data) => {
+      setForecast(data.forecast_48h);
+    })
+    .catch((error) => {
+      console.error("Error fetching forecast:", error);
+    });
+}, [id]);
 
   const critical = tank.status === "critical";
 
@@ -244,27 +256,35 @@ export default function TankAnalysis() {
               <div className="graph-grid-line line-3"></div>
               <div className="graph-grid-line line-4"></div>
 
-              <svg
-                className="prediction-line"
-                viewBox="0 0 500 160"
-                preserveAspectRatio="none"
-              >
-                {critical ? (
-                  <path
-                    d="M0,125 C80,120 120,112 170,105 C230,95 260,85 310,72 C370,57 410,35 500,20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                ) : (
-                  <path
-                    d="M0,90 C80,85 130,92 190,87 C260,82 320,88 390,84 C440,80 470,85 500,82"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                )}
-              </svg>
+             <svg
+  className="prediction-line"
+  viewBox="0 0 500 160"
+  preserveAspectRatio="none"
+>
+  {forecast.length > 0 && (
+    <polyline
+      points={forecast
+        .map((value, index) => {
+          const x = (index / (forecast.length - 1)) * 500;
+
+          const minValue = 4;
+          const maxValue = 9;
+
+          const y =
+            160 -
+            ((value - minValue) / (maxValue - minValue)) * 160;
+
+          return `${x},${y}`;
+        })
+        .join(" ")}
+      fill="none"
+      stroke="#0EA5E9"
+      strokeWidth="4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  )}
+</svg>
 
               {critical && (
                 <div className="danger-threshold">

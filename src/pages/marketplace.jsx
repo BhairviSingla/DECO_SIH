@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -14,32 +14,27 @@ function Marketplace() {
   const navigate = useNavigate();
   const [added, setAdded] = useState(null);
 
-  const treatments = [
-    {
-      id: 1,
-      name: "AquaShield Bacterial Care",
-      description: "Water-safe treatment for bacterial infections",
-      price: "₹499",
-      rating: "4.8",
-      tag: "AI Recommended",
-    },
-    {
-      id: 2,
-      name: "FishGuard Pro",
-      description: "Broad-spectrum fish health treatment",
-      price: "₹649",
-      rating: "4.7",
-      tag: "Verified",
-    },
-    {
-      id: 3,
-      name: "AquaCare Water Treatment",
-      description: "Helps maintain healthy tank conditions",
-      price: "₹399",
-      rating: "4.6",
-      tag: "Popular",
-    },
-  ];
+ const [treatments, setTreatments] = useState([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/marketplace")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch marketplace products");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      setTreatments(data);
+    })
+    .catch((error) => {
+      console.error("Marketplace error:", error);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}, []);
 
   const handleAdd = (id) => {
     setAdded(id);
@@ -112,57 +107,62 @@ function Marketplace() {
         <section className="products-section">
           <div className="products-heading">
             <h2>Recommended products</h2>
-            <span>3 products</span>
+            <span>{treatments.length} products</span>
           </div>
+{loading ? (
+  <p>Loading products...</p>
+) : (
+  treatments.map((product) => (
+    <div className="product-card" key={product.id}>
 
-          {treatments.map((product) => (
-            <div className="product-card" key={product.id}>
+      <div className="product-image">
+        <Package size={38} />
+      </div>
 
-              <div className="product-image">
-                <Package size={38} />
-              </div>
+      <div className="product-details">
+        <div className="product-tag">
+          {product.tag}
+        </div>
 
-              <div className="product-details">
-                <div className="product-tag">
-                  {product.tag}
-                </div>
+        <h3>{product.name}</h3>
 
-                <h3>{product.name}</h3>
+        <p>{product.description}</p>
 
-                <p>{product.description}</p>
+        <div className="product-rating">
+          <Star size={14} fill="currentColor" />
+          <span>{product.rating}</span>
 
-                <div className="product-rating">
-                  <Star size={14} fill="currentColor" />
-                  <span>{product.rating}</span>
-                  <span className="verified-text">
-                    <ShieldCheck size={13} />
-                    Verified seller
-                  </span>
-                </div>
+          <span className="verified-text">
+            <ShieldCheck size={13} />
+            Verified seller
+          </span>
+        </div>
 
-                <div className="product-bottom">
-                  <strong>{product.price}</strong>
+        <div className="product-bottom">
+          <strong>{product.price}</strong>
 
-                  <button
-                    className="add-cart-button"
-                    onClick={() => handleAdd(product.id)}
-                  >
-                    {added === product.id ? (
-                      <>
-                        <CheckCircle2 size={16} />
-                        Added
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart size={16} />
-                        Add
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+          <button
+            className="add-cart-button"
+            onClick={() => handleAdd(product.id)}
+          >
+            {added === product.id ? (
+              <>
+                <CheckCircle2 size={16} />
+                Added
+              </>
+            ) : (
+              <>
+                <ShoppingCart size={16} />
+                Add
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+    </div>
+  ))
+)}
         </section>
 
         {/* Safety Notice */}
