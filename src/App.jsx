@@ -11,6 +11,7 @@ import Actuation from "./pages/actuation";
 import Profile from "./pages/profile";
 import Login from "./pages/login";
 import Language from "./pages/language";
+import Cart from "./pages/cart";
 
 
 function Placeholder({ title }) {
@@ -45,10 +46,11 @@ function App() {
       <Route path="/analysis" element={<Navigate to="/tank/A" replace />} />
 
       <Route path="/disease" element={<DiseaseDetection />} />
-       <Route
-  path="/marketplace"
-  element={<Marketplace />}
-/>
+
+
+       <Route path="/marketplace" element={<Marketplace />}/>
+
+       <Route path="/cart" element={<Cart />} />
 
       <Route
         path="/aquabot"
