@@ -1,490 +1,929 @@
 
  
- // AquaCore - Person 5
+ // ============================================================
+// AquaCore - Person 5
 // Voice / Multilingual Interface
+//
+// Flow:
+// User speaks
+//      ↓
+// Browser Speech Recognition
+//      ↓
+// Recognized text
+//      ↓
+// Person 2 FastAPI
+//      ↓
+// /api/voice-query
+//      ↓
+// { "answer": "..." }
+//      ↓
+// Browser Speech Synthesis
+// ============================================================
+
+
+// ============================================================
+// Speech Recognition
+// ============================================================
 
 const SpeechRecognition =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+// ============================================================
+// Global state
+// ============================================================
 
 let recognition = null;
+
 let isListening = false;
+
 let receivedResult = false;
 
-let selectedLanguage = "hi-IN";
 
-// Person 2 API
-const API_URL = "http://127.0.0.1:8000/api/voice-query";
+// Default language
+// English is selected initially because the current
+// Person 2 backend has been confirmed with English queries.
+
+let selectedLanguage = "en-IN";
+
+
+// ============================================================
+// Person 2 Backend API
+// ============================================================
+
+const API_URL =
+    "http://100.83.222.33:8000/api/voice-query";
+
+
+// ============================================================
+// Voice callbacks
+// ============================================================
 
 let voiceCallbacks = {
-  onStart: null,
-  onResult: null,
-  onProcessing: null,
-  onSpeaking: null,
-  onEnd: null,
-  onError: null
+
+    onStart: null,
+
+    onResult: null,
+
+    onProcessing: null,
+
+    onSpeaking: null,
+
+    onResponse: null,
+
+    onHistory: null,
+
+    onEnd: null,
+
+    onError: null
+
 };
 
 
-// ------------------------------
+// ============================================================
 // Set UI callbacks
-// ------------------------------
+// ============================================================
 
 function setVoiceCallbacks(callbacks) {
-  voiceCallbacks = {
-    ...voiceCallbacks,
-    ...callbacks
-  };
+
+    voiceCallbacks = {
+        ...voiceCallbacks,
+        ...callbacks
+    };
+
 }
 
 
-// ------------------------------
+// ============================================================
 // Create Speech Recognition
-// ------------------------------
+// ============================================================
 
 if (SpeechRecognition) {
 
-  recognition = new SpeechRecognition();
+    recognition =
+        new SpeechRecognition();
 
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.lang = selectedLanguage;
+
+    // One command at a time
+    recognition.continuous = false;
+
+
+    // We only need the final result
+    recognition.interimResults = false;
+
+
+    // Use selected language
+    recognition.lang =
+        selectedLanguage;
+
 }
 
 
-// ------------------------------
-// Send text to Person 2 API
-// ------------------------------
+// ============================================================
+// Send recognized speech to backend
+// ============================================================
 
 async function sendToBackend(spokenText) {
 
-  if (!spokenText || !spokenText.trim()) {
-    throw new Error("No voice text was received.");
-  }
+    if (
+        !spokenText ||
+        !spokenText.trim()
+    ) {
 
-  const response = await fetch(API_URL, {
-    method: "POST",
+        throw new Error(
+            "No voice text was received."
+        );
 
-    headers: {
-      "Content-Type": "application/json"
-    },
-
-    body: JSON.stringify({
-      query: spokenText
-    })
-  });
+    }
 
 
-  if (!response.ok) {
-    throw new Error(
-      `Backend request failed with status ${response.status}`
+    console.log(
+        "Sending query to backend:",
+        spokenText
     );
-  }
 
 
-  const data = await response.json();
+    const response =
+        await fetch(
+            API_URL,
+            {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    query: spokenText.trim(),
+                    language: selectedLanguage
+                 })
+
+            }
+        );
 
 
-  if (!data.answer) {
-    throw new Error(
-      "Backend response does not contain an answer."
+    console.log(
+        "Backend HTTP status:",
+        response.status
     );
-  }
 
 
-  return data.answer;
+    if (!response.ok) {
+
+        throw new Error(
+            `Backend request failed with status ${response.status}`
+        );
+
+    }
+
+
+    const data =
+        await response.json();
+
+
+    console.log(
+        "FULL BACKEND RESPONSE:",
+        data
+    );
+
+
+    // Backend contract:
+    //
+    // {
+    //     "answer": "..."
+    // }
+
+    if (
+        !data ||
+        typeof data.answer !== "string" ||
+        !data.answer.trim()
+    ) {
+
+        throw new Error(
+            "Backend response does not contain a valid answer."
+        );
+
+    }
+
+
+    const answer =
+        data.answer.trim();
+
+
+    console.log(
+        "BACKEND ANSWER:",
+        answer
+    );
+
+
+    return answer;
+
 }
 
 
-// ------------------------------
+// ============================================================
 // Text-to-Speech
-// ------------------------------
+// ============================================================
 
-function speak(text, lang = selectedLanguage) {
+function speak(
+    text,
+    lang = selectedLanguage
+) {
 
-  return new Promise((resolve, reject) => {
+    return new Promise(
+        (resolve, reject) => {
 
-    if (!("speechSynthesis" in window)) {
+            // Check browser support
+            if (
+                !(
+                    "speechSynthesis"
+                    in window
+                )
+            ) {
 
-      reject(
-        new Error(
-          "Text-to-Speech is not supported in this browser."
-        )
-      );
+                reject(
+                    new Error(
+                        "Text-to-Speech is not supported in this browser."
+                    )
+                );
 
-      return;
-    }
+                return;
 
-
-    if (!text || !text.trim()) {
-
-      reject(
-        new Error("Nothing to speak.")
-      );
-
-      return;
-    }
-
-
-    const utterance =
-      new SpeechSynthesisUtterance(text);
-
-    utterance.lang = lang;
+            }
 
 
-    utterance.onstart = () => {
+            // Check text
+            if (
+                !text ||
+                !text.trim()
+            ) {
 
-      console.log("Text-to-Speech started.");
+                reject(
+                    new Error(
+                        "Nothing to speak."
+                    )
+                );
 
-      if (voiceCallbacks.onSpeaking) {
-        voiceCallbacks.onSpeaking();
-      }
+                return;
 
-    };
-
-
-    utterance.onend = () => {
-
-      console.log("Text-to-Speech ended.");
-
-      resolve();
-
-    };
+            }
 
 
-    utterance.onerror = (event) => {
-
-      console.error(
-        "Text-to-Speech error:",
-        event.error
-      );
-
-      reject(
-        new Error(
-          "Could not play the voice response."
-        )
-      );
-
-    };
+            // Stop previous speech
+            window.speechSynthesis.cancel();
 
 
-    window.speechSynthesis.cancel();
+            const utterance =
+                new SpeechSynthesisUtterance(
+                    text
+                );
 
-    window.speechSynthesis.speak(utterance);
 
-  });
+            // Use selected language
+            utterance.lang = lang;
+
+
+            // Normal speaking speed
+            utterance.rate = 1;
+
+
+            utterance.pitch = 1;
+
+
+            utterance.volume = 1;
+
+
+            // --------------------------------
+            // Speech started
+            // --------------------------------
+
+            utterance.onstart = () => {
+
+                console.log(
+                    "Text-to-Speech started."
+                );
+
+
+                if (
+                    voiceCallbacks.onSpeaking
+                ) {
+
+                    voiceCallbacks.onSpeaking();
+
+                }
+
+            };
+
+
+            // --------------------------------
+            // Speech completed
+            // --------------------------------
+
+            utterance.onend = () => {
+
+                console.log(
+                    "Text-to-Speech ended."
+                );
+
+
+                resolve();
+
+            };
+
+
+            // --------------------------------
+            // Speech error
+            // --------------------------------
+
+            utterance.onerror =
+                (event) => {
+
+                    console.error(
+                        "Text-to-Speech error:",
+                        event.error
+                    );
+
+
+                    reject(
+                        new Error(
+                            "Could not play the voice response."
+                        )
+                    );
+
+                };
+
+
+            // Start speaking
+            window.speechSynthesis.speak(
+                utterance
+            );
+
+        }
+    );
+
 }
 
 
-// ------------------------------
-// Start Listening
-// ------------------------------
+// ============================================================
+// Start listening
+// ============================================================
 
 function startListening() {
 
-  if (!recognition) {
+    // Browser doesn't support Speech Recognition
+    if (!recognition) {
 
-    const message =
-      "Speech recognition is not supported in this browser.";
+        const message =
+            "Speech recognition is not supported in this browser.";
 
-    console.error(message);
-
-    if (voiceCallbacks.onError) {
-      voiceCallbacks.onError(message);
-    }
-
-    return;
-  }
+        console.error(message);
 
 
-  if (isListening) {
+        if (
+            voiceCallbacks.onError
+        ) {
 
-    console.warn(
-      "Voice recognition is already running."
-    );
+            voiceCallbacks.onError(
+                message
+            );
 
-    return;
-  }
+        }
 
+        return;
 
-  try {
-
-    isListening = true;
-
-    receivedResult = false;
-
-    recognition.lang = selectedLanguage;
-
-    recognition.start();
-
-  } catch (error) {
-
-    isListening = false;
-
-    console.error(
-      "Could not start voice recognition:",
-      error
-    );
-
-    if (voiceCallbacks.onError) {
-      voiceCallbacks.onError(
-        "Could not start voice recognition."
-      );
-    }
-
-  }
-}
-
-
-// ------------------------------
-// Recognition Events
-// ------------------------------
-
-if (recognition) {
-
-
-  // Listening started
-
-  recognition.onstart = () => {
-
-    isListening = true;
-
-    receivedResult = false;
-
-    console.log(
-      "Voice recognition started."
-    );
-
-    if (voiceCallbacks.onStart) {
-      voiceCallbacks.onStart();
-    }
-
-  };
-
-
-  // Speech recognized
-
-  recognition.onresult = async (event) => {
-
-    const spokenText =
-      event.results[0][0].transcript.trim();
-
-    receivedResult = true;
-
-
-    if (!spokenText) {
-
-      const message =
-        "No speech was recognized.";
-
-      console.warn(message);
-
-      if (voiceCallbacks.onError) {
-        voiceCallbacks.onError(message);
-      }
-
-      return;
     }
 
 
-    console.log(
-      "Farmer said:",
-      spokenText
-    );
+    // Already listening
+    if (isListening) {
 
+        console.warn(
+            "Voice recognition is already running."
+        );
 
-    if (voiceCallbacks.onResult) {
-      voiceCallbacks.onResult(spokenText);
-    }
+        return;
 
-
-    // ------------------------------
-    // Processing
-    // ------------------------------
-
-    if (voiceCallbacks.onProcessing) {
-      voiceCallbacks.onProcessing();
     }
 
 
     try {
 
-      console.log(
-        "Sending voice text to backend..."
-      );
+        isListening = true;
+
+        receivedResult = false;
 
 
-      const answer =
-        await sendToBackend(spokenText);
+        // Make sure recognition uses
+        // the latest selected language.
+
+        recognition.lang =
+            selectedLanguage;
 
 
-      console.log(
-        "Backend answer:",
-        answer
-      );
+        recognition.start();
+
+    }
+
+    catch (error) {
+
+        isListening = false;
 
 
-      // ------------------------------
-      // Speak backend answer
-      // ------------------------------
-
-      await speak(
-        answer,
-        selectedLanguage
-      );
-
-
-      if (voiceCallbacks.onEnd) {
-        voiceCallbacks.onEnd();
-      }
-
-
-    } catch (error) {
-
-      console.error(
-        "Voice assistant error:",
-        error
-      );
-
-
-      if (voiceCallbacks.onError) {
-
-        voiceCallbacks.onError(
-          "Sorry, I couldn't process your request. Please try again."
+        console.error(
+            "Could not start voice recognition:",
+            error
         );
 
-      }
+
+        if (
+            voiceCallbacks.onError
+        ) {
+
+            voiceCallbacks.onError(
+                "Could not start voice recognition."
+            );
+
+        }
 
     }
 
-  };
+}
 
 
-  // ------------------------------
-  // Recognition error
-  // ------------------------------
+// ============================================================
+// Speech Recognition Events
+// ============================================================
 
-  recognition.onerror = (event) => {
+if (recognition) {
+
+
+    // --------------------------------------------------------
+    // Recognition started
+    // --------------------------------------------------------
+
+    recognition.onstart = () => {
+
+        isListening = true;
+
+        receivedResult = false;
+
+
+        console.log(
+            "Voice recognition started."
+        );
+
+
+        if (
+            voiceCallbacks.onStart
+        ) {
+
+            voiceCallbacks.onStart();
+
+        }
+
+    };
+
+
+    // --------------------------------------------------------
+    // Speech recognized
+    // --------------------------------------------------------
+
+    recognition.onresult =
+        async (event) => {
+
+            try {
+
+                const spokenText =
+                    event
+                        .results[0][0]
+                        .transcript
+                        .trim();
+
+
+                receivedResult = true;
+
+
+                if (!spokenText) {
+
+                    const message =
+                        "No speech was recognized.";
+
+                    console.warn(message);
+
+
+                    if (
+                        voiceCallbacks.onError
+                    ) {
+
+                        voiceCallbacks.onError(
+                            message
+                        );
+
+                    }
+
+                    return;
+
+                }
+
+
+                console.log(
+                    "Farmer said:",
+                    spokenText
+                );
+
+
+                // Send recognized text to UI
+                if (
+                    voiceCallbacks.onResult
+                ) {
+
+                    voiceCallbacks.onResult(
+                        spokenText
+                    );
+
+                }
+
+
+                // Show processing state
+                if (
+                    voiceCallbacks.onProcessing
+                ) {
+
+                    voiceCallbacks.onProcessing();
+
+                }
+
+
+                // ------------------------------------------------
+                // Backend request
+                // ------------------------------------------------
+
+                console.log(
+                    "Sending voice text to backend..."
+                );
+
+
+                const answer =
+                    await sendToBackend(
+                        spokenText
+                    );
+
+
+                console.log(
+                    "Backend answer:",
+                    answer
+                );
+
+
+                // Send answer to UI
+                if (
+                    voiceCallbacks.onResponse
+                ) {
+
+                    voiceCallbacks.onResponse(
+                        answer
+                    );
+
+                }
+
+
+                // Add to history
+                if (
+                    voiceCallbacks.onHistory
+                ) {
+
+                    voiceCallbacks.onHistory(
+                        spokenText,
+                        answer
+                    );
+
+                }
+
+
+                // ------------------------------------------------
+                // Speak backend answer
+                // ------------------------------------------------
+
+                await speak(
+                    answer,
+                    selectedLanguage
+                );
+
+
+                // Finished successfully
+                if (
+                    voiceCallbacks.onEnd
+                ) {
+
+                    voiceCallbacks.onEnd(
+                        true
+                    );
+
+                }
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Voice assistant error:",
+                    error
+                );
+
+
+                if (
+                    voiceCallbacks.onError
+                ) {
+
+                    voiceCallbacks.onError(
+                        getUserFriendlyError(
+                            error
+                        )
+                    );
+
+                }
+
+            }
+
+        };
+
+
+    // --------------------------------------------------------
+    // Recognition error
+    // --------------------------------------------------------
+
+    recognition.onerror =
+        (event) => {
+
+            console.error(
+                "Voice recognition error:",
+                event.error
+            );
+
+
+            let message;
+
+
+            switch (event.error) {
+
+
+                case "not-allowed":
+
+                    message =
+                        "Microphone permission was denied.";
+
+                    break;
+
+
+                case "no-speech":
+
+                    message =
+                        "No speech was detected. Please try again.";
+
+                    break;
+
+
+                case "audio-capture":
+
+                    message =
+                        "No microphone was detected.";
+
+                    break;
+
+
+                case "network":
+
+                    message =
+                        "A network error occurred during speech recognition.";
+
+                    break;
+
+
+                case "aborted":
+
+                    message =
+                        "Voice recognition was stopped.";
+
+                    break;
+
+
+                case "service-not-allowed":
+
+                    message =
+                        "Speech recognition service is not available.";
+
+                    break;
+
+
+                default:
+
+                    message =
+                        "Something went wrong with voice recognition.";
+
+            }
+
+
+            if (
+                voiceCallbacks.onError
+            ) {
+
+                voiceCallbacks.onError(
+                    message
+                );
+
+            }
+
+        };
+
+
+    // --------------------------------------------------------
+    // Recognition ended
+    // --------------------------------------------------------
+
+    recognition.onend = () => {
+
+        isListening = false;
+
+
+        console.log(
+            "Voice recognition ended."
+        );
+
+
+        // IMPORTANT:
+        // Do not show an error here.
+        //
+        // onresult may already have triggered
+        // backend processing and TTS.
+
+    };
+
+}
+
+
+// ============================================================
+// User-friendly error messages
+// ============================================================
+
+function getUserFriendlyError(
+    error
+) {
+
+    const message =
+        error &&
+        error.message
+            ? error.message
+            : "";
+
 
     console.error(
-      "Voice error:",
-      event.error
+        "Detailed error:",
+        message
     );
 
 
-    let message;
+    // Backend/network error
+    if (
+        message.includes(
+            "Failed to fetch"
+        )
+    ) {
 
+        return (
+            "Unable to connect to AquaCore server. " +
+            "Please check that the backend is running."
+        );
 
-    switch (event.error) {
-
-      case "not-allowed":
-        message =
-          "Microphone permission was denied.";
-        break;
-
-
-      case "no-speech":
-        message =
-          "No speech was detected. Please try again.";
-        break;
-
-
-      case "audio-capture":
-        message =
-          "No microphone was detected.";
-        break;
-
-
-      case "network":
-        message =
-          "A network error occurred during speech recognition.";
-        break;
-
-
-      case "aborted":
-        message =
-          "Voice recognition was stopped.";
-        break;
-
-
-      default:
-        message =
-          "Something went wrong with voice recognition.";
     }
 
 
-    if (voiceCallbacks.onError) {
-      voiceCallbacks.onError(message);
+    // HTTP error
+    if (
+        message.includes(
+            "Backend request failed"
+        )
+    ) {
+
+        return (
+            "AquaCore server returned an error. " +
+            "Please try again."
+        );
+
     }
 
-  };
+
+    // TTS error
+    if (
+        message.includes(
+            "Text-to-Speech"
+        ) ||
+        message.includes(
+            "voice response"
+        )
+    ) {
+
+        return (
+            "I received the answer, " +
+            "but I could not play the voice response."
+        );
+
+    }
 
 
-  // ------------------------------
-  // Recognition ended
-  // ------------------------------
+    // Empty backend answer
+    if (
+        message.includes(
+            "valid answer"
+        )
+    ) {
 
-  recognition.onend = () => {
+        return (
+            "The server did not provide a valid answer."
+        );
 
-    isListening = false;
+    }
+
+
+    // Default
+    return (
+        "Sorry, I couldn't process your request. " +
+        "Please try again."
+    );
+
+}
+
+
+// ============================================================
+// Change language
+// ============================================================
+
+function setLanguage(
+    language
+) {
+
+    if (
+        !language ||
+        typeof language !== "string"
+    ) {
+
+        console.error(
+            "Invalid language:",
+            language
+        );
+
+        return;
+
+    }
+
+
+    selectedLanguage =
+        language;
+
+
+    if (recognition) {
+
+        recognition.lang =
+            selectedLanguage;
+
+    }
+
 
     console.log(
-      "Voice recognition ended."
+        "Voice language changed to:",
+        selectedLanguage
     );
 
-
-    // If there was no result, show no-speech error.
-
-    if (!receivedResult) {
-
-      const message =
-        "No speech was detected. Please try again.";
-
-      console.warn(message);
-
-      if (voiceCallbacks.onError) {
-        voiceCallbacks.onError(message);
-      }
-
-    }
-
-  };
-
 }
 
 
-// ------------------------------
-// Language
-// ------------------------------
-
-function setLanguage(language) {
-
-  selectedLanguage = language;
-
-  if (recognition) {
-    recognition.lang = language;
-  }
-
-  console.log(
-    "Voice language changed to:",
-    language
-  );
-
-}
-
+// ============================================================
+// Get selected language
+// ============================================================
 
 function getLanguage() {
-  return selectedLanguage;
+
+    return selectedLanguage;
+
 }
 
 
-// ------------------------------
-// Export
-// ------------------------------
+// ============================================================
+// Exports
+// ============================================================
 
 export {
-  startListening,
-  speak,
-  setLanguage,
-  getLanguage,
-  setVoiceCallbacks
+
+    startListening,
+
+    speak,
+
+    setLanguage,
+
+    getLanguage,
+
+    setVoiceCallbacks
+
 };

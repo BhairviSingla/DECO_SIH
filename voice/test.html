@@ -1,5 +1,4 @@
-
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -21,42 +20,100 @@
             justify-content: center;
             align-items: center;
 
+            padding: 20px;
+
             font-family: Arial, sans-serif;
+
             background: #f5f7fa;
         }
 
         .voice-container {
-            width: 90%;
-            max-width: 500px;
+            width: 100%;
+            max-width: 550px;
 
-            padding: 40px 30px;
+            padding: 35px 30px;
 
             text-align: center;
 
             background: white;
+
             border-radius: 20px;
 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.08);
         }
 
         h1 {
-            margin-bottom: 30px;
+            margin-top: 0;
+            margin-bottom: 8px;
         }
 
+        .subtitle {
+            margin-top: 0;
+            margin-bottom: 28px;
+
+            color: #666;
+        }
+
+        /* ------------------------------
+           Language selector
+        ------------------------------ */
+
+        .language-section {
+            text-align: left;
+
+            margin-bottom: 25px;
+        }
+
+        .language-section label {
+            display: block;
+
+            margin-bottom: 8px;
+
+            font-weight: bold;
+        }
+
+        #language-select {
+            width: 100%;
+
+            padding: 12px 14px;
+
+            border: 1px solid #d5dbe3;
+
+            border-radius: 10px;
+
+            font-size: 16px;
+
+            background: white;
+
+            cursor: pointer;
+        }
+
+        #language-select:focus {
+            outline: 2px solid #90caf9;
+        }
+
+        /* ------------------------------
+           Voice button
+        ------------------------------ */
+
         #voice-btn {
-            width: 100px;
-            height: 100px;
+            width: 110px;
+            height: 110px;
 
             border: none;
+
             border-radius: 50%;
 
-            font-size: 40px;
+            font-size: 42px;
 
             cursor: pointer;
 
             background: #e8f5e9;
 
-            transition: transform 0.2s ease;
+            transition:
+                transform 0.2s ease,
+                background 0.2s ease;
         }
 
         #voice-btn:hover {
@@ -65,10 +122,15 @@
 
         #voice-btn:disabled {
             cursor: not-allowed;
+            opacity: 0.8;
         }
 
         #voice-btn.listening {
             animation: pulse 1.2s infinite;
+        }
+
+        #voice-btn.processing {
+            animation: processingPulse 1s infinite;
         }
 
         @keyframes pulse {
@@ -85,17 +147,36 @@
             }
         }
 
+        @keyframes processingPulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.06);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* ------------------------------
+           Status
+        ------------------------------ */
+
         #status {
             margin-top: 25px;
 
-            font-size: 18px;
-            font-weight: bold;
+            min-height: 28px;
 
-            min-height: 25px;
+            font-size: 18px;
+
+            font-weight: bold;
         }
 
         #transcript {
-            margin-top: 20px;
+            margin-top: 18px;
 
             min-height: 30px;
 
@@ -104,8 +185,117 @@
             line-height: 1.5;
         }
 
+        #response {
+            margin-top: 15px;
+
+            min-height: 30px;
+
+            color: #222;
+
+            line-height: 1.5;
+
+            font-weight: 500;
+        }
+
         .error {
             color: #c62828;
+        }
+
+        /* ------------------------------
+           Loading dots
+        ------------------------------ */
+
+        .loading-dots {
+            display: inline-flex;
+
+            gap: 4px;
+
+            margin-left: 5px;
+        }
+
+        .loading-dots span {
+            width: 6px;
+            height: 6px;
+
+            border-radius: 50%;
+
+            background: currentColor;
+
+            animation: loadingDot 1.2s infinite;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes loadingDot {
+            0%,
+            60%,
+            100% {
+                opacity: 0.3;
+                transform: translateY(0);
+            }
+
+            30% {
+                opacity: 1;
+                transform: translateY(-4px);
+            }
+        }
+
+        /* ------------------------------
+           Voice history
+        ------------------------------ */
+
+        .history-section {
+            margin-top: 30px;
+
+            text-align: left;
+        }
+
+        .history-section h2 {
+            margin-bottom: 12px;
+
+            font-size: 18px;
+        }
+
+        #history {
+            max-height: 220px;
+
+            overflow-y: auto;
+        }
+
+        .history-item {
+            margin-bottom: 10px;
+
+            padding: 10px 12px;
+
+            border-radius: 10px;
+
+            background: #f5f7fa;
+
+            font-size: 14px;
+
+            line-height: 1.5;
+        }
+
+        .history-command {
+            font-weight: bold;
+        }
+
+        .history-answer {
+            margin-top: 4px;
+
+            color: #555;
+        }
+
+        .empty-history {
+            color: #777;
+
+            font-size: 14px;
         }
     </style>
 </head>
@@ -113,9 +303,79 @@
 
 <body>
 
-    <div class="voice-container">
+    <main class="voice-container">
 
         <h1>AquaCore Voice Assistant</h1>
+
+        <p class="subtitle">
+            Ask about your aquaculture tank
+        </p>
+
+
+        <!-- ------------------------------
+             Language selector
+        ------------------------------ -->
+
+        <div class="language-section">
+
+            <label for="language-select">
+                Select language
+            </label>
+
+            <select id="language-select">
+
+                <option value="en-IN">
+                    English (India)
+                </option>
+
+                <option value="hi-IN">
+                    Hindi
+                </option>
+
+                <option value="bn-IN">
+                    Bengali
+                </option>
+
+                <option value="te-IN">
+                    Telugu
+                </option>
+
+                <option value="mr-IN">
+                    Marathi
+                </option>
+
+                <option value="ta-IN">
+                    Tamil
+                </option>
+
+                <option value="gu-IN">
+                    Gujarati
+                </option>
+
+                <option value="kn-IN">
+                    Kannada
+                </option>
+
+                <option value="ml-IN">
+                    Malayalam
+                </option>
+
+                <option value="pa-IN">
+                    Punjabi
+                </option>
+
+                <option value="or-IN">
+                    Odia
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- ------------------------------
+             Voice button
+        ------------------------------ -->
 
         <button
             id="voice-btn"
@@ -125,20 +385,59 @@
             🎙️
         </button>
 
+
+        <!-- ------------------------------
+             Status
+        ------------------------------ -->
+
         <p id="status">
             Ready
         </p>
 
+
+        <!-- ------------------------------
+             Recognized speech
+        ------------------------------ -->
+
         <p id="transcript"></p>
 
-    </div>
+
+        <!-- ------------------------------
+             Backend answer
+        ------------------------------ -->
+
+        <p id="response"></p>
+
+
+        <!-- ------------------------------
+             History
+        ------------------------------ -->
+
+        <section class="history-section">
+
+            <h2>
+                Voice Command History
+            </h2>
+
+            <div id="history">
+
+                <p class="empty-history">
+                    No voice commands yet.
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
 
 
     <script type="module">
 
         import {
             startListening,
-            speak,
+            setLanguage,
+            getLanguage,
             setVoiceCallbacks
         } from "./voiceAssistant.js";
 
@@ -156,6 +455,49 @@
         const transcript =
             document.getElementById("transcript");
 
+        const response =
+            document.getElementById("response");
+
+        const languageSelect =
+            document.getElementById("language-select");
+
+        const historyContainer =
+            document.getElementById("history");
+
+
+        // ------------------------------
+        // Set initial language
+        // ------------------------------
+
+        languageSelect.value =
+            getLanguage();
+
+
+        // ------------------------------
+        // Language changed
+        // ------------------------------
+
+        languageSelect.addEventListener(
+            "change",
+            () => {
+
+                const language =
+                    languageSelect.value;
+
+                setLanguage(language);
+
+                status.textContent =
+                    "Language changed. Ready";
+
+                status.className = "";
+
+                transcript.textContent = "";
+
+                response.textContent = "";
+
+            }
+        );
+
 
         // ------------------------------
         // Voice callbacks
@@ -163,18 +505,23 @@
 
         setVoiceCallbacks({
 
-            // Recognition started
             onStart: () => {
 
-                status.textContent =
+                status.innerHTML =
                     "🎙️ Listening...";
 
                 status.className = "";
 
                 transcript.textContent = "";
 
+                response.textContent = "";
+
                 voiceButton.classList.add(
                     "listening"
+                );
+
+                voiceButton.classList.remove(
+                    "processing"
                 );
 
                 voiceButton.disabled = true;
@@ -182,57 +529,91 @@
             },
 
 
-            // Speech recognized
-    onResult: (spokenText) => {
+            onResult: (spokenText) => {
 
-        transcript.textContent =
-            `You said: ${spokenText}`;
+                transcript.textContent =
+                    `You said: ${spokenText}`;
 
-        status.textContent =
-            "⏳ Processing...";
-
-        status.className = "";
-
-    },
-    onProcessing: () => {
-
-    status.textContent =
-        "⏳ Processing...";
-
-    status.className = "";
-
-    voiceButton.classList.remove(
-        "listening"
-    );
-
-},
-    onSpeaking: () => {
-
-    status.textContent =
-        "🔊 Speaking...";
-
-    status.className = "";
-
-},
+            },
 
 
-            // Recognition ended
-    onEnd: (hadResult) => {
+            onProcessing: () => {
 
-        if (!hadResult) {
-        status.textContent = "Ready";
-        }
+                status.innerHTML =
+                    `⏳ Processing
+                    <span class="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>`;
 
-        voiceButton.classList.remove(
-        "listening"
-        );
+                status.className = "";
 
-        voiceButton.disabled = false;
+                voiceButton.classList.remove(
+                    "listening"
+                );
 
-},
+                voiceButton.classList.add(
+                    "processing"
+                );
+
+            },
 
 
-            // Voice error
+            onSpeaking: () => {
+
+                status.textContent =
+                    "🔊 Speaking...";
+
+                status.className = "";
+
+                voiceButton.classList.remove(
+                    "processing"
+                );
+
+            },
+
+
+            onResponse: (answer) => {
+
+                response.textContent =
+                    `AquaCore: ${answer}`;
+
+            },
+
+
+            onHistory: (spokenText, answer) => {
+
+                addHistoryItem(
+                    spokenText,
+                    answer
+                );
+
+            },
+
+
+            onEnd: (hadResult) => {
+
+                if (!hadResult) {
+
+                    status.textContent =
+                        "Ready";
+
+                }
+
+                voiceButton.classList.remove(
+                    "listening"
+                );
+
+                voiceButton.classList.remove(
+                    "processing"
+                );
+
+                voiceButton.disabled = false;
+
+            },
+
+
             onError: (message) => {
 
                 status.textContent =
@@ -243,6 +624,10 @@
 
                 voiceButton.classList.remove(
                     "listening"
+                );
+
+                voiceButton.classList.remove(
+                    "processing"
                 );
 
                 voiceButton.disabled = false;
@@ -260,17 +645,73 @@
             "click",
             () => {
 
+                response.textContent = "";
+
                 status.textContent =
                     "Starting...";
 
                 status.className = "";
 
-                transcript.textContent = "";
-
                 startListening();
 
             }
         );
+
+
+        // ------------------------------
+        // Add command to history
+        // ------------------------------
+
+        function addHistoryItem(
+            spokenText,
+            answer
+        ) {
+
+            const emptyMessage =
+                historyContainer.querySelector(
+                    ".empty-history"
+                );
+
+            if (emptyMessage) {
+                emptyMessage.remove();
+            }
+
+
+            const item =
+                document.createElement("div");
+
+            item.className =
+                "history-item";
+
+
+            const command =
+                document.createElement("div");
+
+            command.className =
+                "history-command";
+
+            command.textContent =
+                `You: ${spokenText}`;
+
+
+            const answerElement =
+                document.createElement("div");
+
+            answerElement.className =
+                "history-answer";
+
+            answerElement.textContent =
+                `AquaCore: ${answer}`;
+
+
+            item.appendChild(command);
+
+            item.appendChild(answerElement);
+
+
+            historyContainer.prepend(item);
+
+        }
 
     </script>
 
